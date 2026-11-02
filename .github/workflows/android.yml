@@ -11,32 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Extract Android project
+      - name: Extract project
         run: |
           mkdir project
           unzip -o "j.a.r.v.i.s..zip" -d project
 
+      - name: Fix build tool versions
+        run: |
+          sed -i 's/agp = "9.1.1"/agp = "8.10.2"/' project/gradle/libs.versions.toml
+          sed -i 's/googleDevtoolsKsp = "2.3.5"/googleDevtoolsKsp = "2.2.10-2.0.2"/' project/gradle/libs.versions.toml
+          sed -i 's#distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.11.1-bin.zip#' project/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/compileSdk { version = release(36) { minorApiLevel = 1 } }/compileSdk = 36/' project/app/build.gradle.kts
+
+      - name: Install Android components
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
       - name: Build APK
         working-directory: project
-        run: gradle assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Android-APK
+          name: JARVIS-APK
           path: project/app/build/outputs/apk/debug/app-debug.apk
           
